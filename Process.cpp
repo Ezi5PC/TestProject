@@ -64,6 +64,12 @@ void Process::handleOddOverlaps(){
                         delete(_odds[j]);
                         processed++;
                         break;
+                    case 'A':
+                        _odds[i]->start = _odds[j]->start;
+                        _odds[i]->end = _odds[j]->end;
+                        delete(_odds[j]);
+                        processed++;
+                        break;
                 }
             }
         }
@@ -91,6 +97,12 @@ void Process::handleEvenOverlaps(){
                         processed++;
                         break;
                     case 'H':
+                        _evens[i]->end = _evens[j]->end;
+                        delete(_evens[j]);
+                        processed++;
+                        break;
+                    case 'A':
+                        _evens[i]->start = _evens[j]->start;
                         _evens[i]->end = _evens[j]->end;
                         delete(_evens[j]);
                         processed++;
@@ -123,6 +135,9 @@ char Process::checkOverlapType(ProcessedPlace* p1, ProcessedPlace* p2){
     }
     if (p1->start < p2->start && p1->end < p2->end && p2->start < p1->end){
         return 'H';
+    }
+    if (p2->start < p1->start && p1->end < p2->end){
+        return 'A';
     }
     return 'N';
 }
