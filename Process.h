@@ -8,18 +8,17 @@ class Process{
     public:
         void getData();
         void processData();
-        void handleOddOverlaps();
-        void handleEvenOverlaps();
-        bool contains(std::string name, std::vector<Place> vec);
         void writeData();
-        char checkOverlapType(ProcessedPlace* p1, ProcessedPlace* p2);
-        void sortEvens();
-        void sortOdds();
+        enum overlapType{BETWEEN, HIGHER, LOWER, WIDER, NO};
     private:
         std::vector<ProcessedPlace*> _processedData;
         std::vector<Place> _rawData; 
         std::vector<ProcessedPlace*> _odds;
         std::vector<ProcessedPlace*> _evens;
+        void handleOverlaps();
+        bool contains(std::string name, std::vector<Place> vec);
+        overlapType checkOverlapType(ProcessedPlace* p1, ProcessedPlace* p2);
+        void sort();
 };
 
 struct ProcessedPlace{
