@@ -10,100 +10,78 @@ void Process::getData(){
 }
 
 void Process::processData(){
-    sort();
-    handleOverlaps();
-
+    _odds = sort("O");
+    _evens = sort("E");
+    handleOverlaps(_evens);
+    handleOverlaps(_odds);
 }
 
 void Process::writeData(){
-    for(ProcessedPlace* p : _processedData){
-        p->writeData();
+    for(ProcessedPlace p : _processedData){
+        p.writeData();
     }
 }
 
-void Process::sort(){
+std::vector<ProcessedPlace> Process::sort(std::string type){
+    std::vector<ProcessedPlace> result;
     for (Place p : _rawData){
-        if (p.firstType == "E" && contains(p.name, _rawData) == 1){
-            _evens.push_back(new ProcessedPlace(p.name, p.type, 'E', stoi(p.firstStart), stoi(p.firstEnd)));
+        if (p.firstType == type && contains(p.name, _rawData) == 1){
+            result.push_back(ProcessedPlace(p.name, p.type, type, stoi(p.firstStart), stoi(p.firstEnd)));
         }
-        else if (p.secondType == "E" && contains(p.name, _rawData) == 1){
-            _evens.push_back(new ProcessedPlace(p.name, p.type, 'E', stoi(p.secondStart), stoi(p.secondEnd)));
+        else if (p.secondType == type && contains(p.name, _rawData) == 1){
+            result.push_back(ProcessedPlace(p.name, p.type, type, stoi(p.secondStart), stoi(p.secondEnd)));
         }
-        if (p.firstType == "O" && contains(p.name, _rawData) == 1){
-            _odds.push_back(new ProcessedPlace(p.name, p.type, 'O', stoi(p.firstStart), stoi(p.firstEnd)));
-        }
-        else if (p.secondType == "O" && contains(p.name, _rawData) == 1){
-            _odds.push_back(new ProcessedPlace(p.name, p.type, 'O', stoi(p.secondStart), stoi(p.secondEnd)));
+    }
+    return result;
+}
+
+void Process::handleOverlaps(std::vector<ProcessedPlace> vec){
+    int duplicates;
+    for (int i = 0; i < vec.size();i++){
+        duplicates = 0;
+        for(int j = i+1; j < vec.size();j++){
+            if (vec[i].name == vec[j].name){
+                switch(checkOverlapType(vec[i], vec[j])){
+                    case overlapType::BETWEEN:
+                        if(!(contains(vec[j], _processedData))){
+                            _processedData.push_back(vec[j]);
+                        }
+                        break;
+                    case overlapType::LOWER:
+                        vec[j].start = vec[i].start;
+                        if(!(contains(vec[j], _processedData))){
+                            _processedData.push_back(vec[j]);
+                        }
+                        break;
+                    case overlapType::HIGHER:
+                        vec[j].start = vec[i].end;
+                        if(!(contains(vec[j], _processedData))){
+                            _processedData.push_back(vec[j]);
+                        }
+                        break;
+                    case overlapType::WIDER:
+                        if(!(contains(vec[i], _processedData))){
+                            _processedData.push_back(vec[i]);
+                        }
+                        break;
+                    case overlapType::EQUAL:
+                        if(!(contains(vec[i], _processedData))){
+                            _processedData.push_back(vec[i]);
+                        }
+                        break;
+                }
+            }
         }
     }
 }
 
-void Process::handleOverlaps(){
-    int processed;
-    for (int i = 0; i < _odds.size();i++){
-        processed = 0;
-        for(int j = i+1; j < _odds.size();j++){
-            if (_odds[i]->name == _odds[j]->name){
-                switch(checkOverlapType(_odds[i], _odds[j])){
-                    case overlapType::BETWEEN:
-                        delete(_odds[j]);
-                        processed++;
-                        break;
-                    case overlapType::LOWER:
-                        _odds[i]->start = _odds[j]->start;
-                        delete(_odds[j]);
-                        processed++;
-                        break;
-                    case overlapType::HIGHER:
-                        _odds[i]->end = _odds[j]->end;
-                        delete(_odds[j]);
-                        processed++;
-                        break;
-                    case overlapType::WIDER:
-                        _odds[i]->start = _odds[j]->start;
-                        _odds[i]->end = _odds[j]->end;
-                        delete(_odds[j]);
-                        processed++;
-                        break;
-                }
-            }
-        }
-        if (processed > 0){
-            _processedData.push_back(_odds[i]);
+bool Process::contains(ProcessedPlace place, std::vector<ProcessedPlace> vec){
+    for(ProcessedPlace p : vec){
+        if(place == p){
+            return 1;
         }
     }
-    for (int i = 0; i < _evens.size();i++){
-        processed = 0;
-        for(int j = i+1; j < _evens.size();j++){
-            if (_evens[i]->name == _evens[j]->name){
-                switch(checkOverlapType(_evens[i], _evens[j])){
-                    case overlapType::BETWEEN:
-                        delete(_evens[j]);
-                        processed++;
-                        break;
-                    case overlapType::LOWER:
-                        _evens[i]->start = _evens[j]->start;
-                        delete(_evens[j]);
-                        processed++;
-                        break;
-                    case overlapType::HIGHER:
-                        _evens[i]->end = _evens[j]->end;
-                        delete(_evens[j]);
-                        processed++;
-                        break;
-                    case overlapType::WIDER:
-                        _evens[i]->start = _evens[j]->start;
-                        _evens[i]->end = _evens[j]->end;
-                        delete(_evens[j]);
-                        processed++;
-                        break;
-                }
-            }
-        }
-        if (processed > 0){
-            _processedData.push_back(_evens[i]);
-        }
-    }
+    return 0;
 }
 
 bool Process::contains(std::string name, std::vector<Place> vec){
@@ -111,23 +89,29 @@ bool Process::contains(std::string name, std::vector<Place> vec){
     for(Place p : vec){
         if (p.name == name){
             howManyTimes++;
+            if(howManyTimes >= 2){
+                return 1;
+            }
         }
     }
-    return howManyTimes > 1;
+    return 0;
 }
 
-Process::overlapType Process::checkOverlapType(ProcessedPlace* p1, ProcessedPlace* p2){
-    if (p1->start < p2->start && p2->end < p1->end){
+Process::overlapType Process::checkOverlapType(ProcessedPlace p1, ProcessedPlace p2){
+    if (p1.start < p2.start && p2.end < p1.end){
         return overlapType::BETWEEN;
     }
-    if (p2->start < p1->start && p2->end < p1->end && p1->start < p2->end){
+    if (p2.start < p1.start && p2.end < p1.end && p1.start < p2.end){
         return overlapType::LOWER;
     }
-    if (p1->start < p2->start && p1->end < p2->end && p2->start < p1->end){
+    if (p1.start < p2.start && p1.end < p2.end && p2.start < p1.end){
         return overlapType::HIGHER;
     }
-    if (p2->start < p1->start && p1->end < p2->end){
+    if (p2.start < p1.start && p1.end < p2.end){
         return overlapType::WIDER;
+    }
+    if (p2.start == p1.start && p2.end == p1.end){
+        return overlapType::EQUAL;
     }
     return overlapType::NO;
 }
